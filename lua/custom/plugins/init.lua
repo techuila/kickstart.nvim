@@ -13,6 +13,7 @@ vim.keymap.set('v', 'L', '$')
 vim.keymap.set('n', '<leader>gg', ':G<CR>', { desc = 'Git status' })
 vim.keymap.set('n', '<M-H>', 'gT', { desc = 'Go to Previous tab' })
 vim.keymap.set('n', '<M-L>', 'gt', { desc = 'Go to Next tab' })
+
 return {
   {
     'nvim-flutter/flutter-tools.nvim',

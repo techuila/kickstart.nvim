@@ -6,6 +6,13 @@ return {
   {
     'lewis6991/gitsigns.nvim',
     opts = {
+      signs = {
+        add = { text = '+' },
+        change = { text = '~' },
+        delete = { text = '_' },
+        topdelete = { text = '‾' },
+        changedelete = { text = '~' },
+      },
       on_attach = function(bufnr)
         local gitsigns = require 'gitsigns'
 
@@ -48,6 +55,42 @@ return {
         map('n', '<leader>hR', gitsigns.reset_buffer, { desc = 'git [R]eset buffer' })
         map('n', '<leader>hp', gitsigns.preview_hunk, { desc = 'git [p]review hunk' })
         map('n', '<leader>hb', gitsigns.blame_line, { desc = 'git [b]lame line' })
+        map('n', '<leader>hl', function()
+          -- Open popup window with commit SHA of blamed line.
+          gitsigns.blame_line({ full = false }, function()
+            -- In order to focus opened popup window, blame_line needs to be called again.
+            gitsigns.blame_line({}, function()
+              -- Now that popup is focused, extract commit SHA from the start of it.
+              local blamed_commit = vim.fn.getline(1):match '^(%x+)'
+
+              -- Close the focused popup.
+              vim.cmd ':quit'
+
+              -- If commit is unavailable (i.e. local changes), reopen the popup window, but without focus.
+              if blamed_commit == nil then
+                gitsigns.blame_line()
+                return
+              end
+
+              -- Compute parent commit of the blamed one.
+              local blamed_commit_parent = blamed_commit .. '^'
+              local result = vim.system({ 'git', 'rev-parse', '--short', blamed_commit_parent }):wait()
+              if result.code ~= 0 then
+                print('Ignoring the command since commit ' .. blamed_commit_parent .. " doesn't exist!")
+                return
+              end
+
+              -- Use concrete commit SHA rather than SHA and ^ notation.
+              blamed_commit_parent = result.stdout:match '%S+'
+
+              -- Create new tab which is viewing current version of the file.
+              vim.cmd ':tabnew %'
+
+              -- Use new tab to show changes that blamed commit introduced.
+              gitsigns.diffthis(blamed_commit_parent)
+            end)
+          end)
+        end, { desc = "git diff against [l]ine's last commit" })
         map('n', '<leader>hd', gitsigns.diffthis, { desc = 'git [d]iff against index' })
         map('n', '<leader>hD', function()
           gitsigns.diffthis '@'
